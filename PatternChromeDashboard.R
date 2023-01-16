@@ -14,7 +14,7 @@ library(shinythemes)
 #### Load data ####
 #setwd("~/PatternChromeDashboard")
 xgb_model <- xgb.load("xgb_model")
-load("E003_validation_test_df.RData")
+load("E003_gene_df.RData")
 load("explainer.RData")
 load("gene_symbols.RData")
 
@@ -24,7 +24,7 @@ threshold = 0.05
 #### XGB Explainer functions ####
 showWaterfall = function(xgb.model, explainer, data.matrix, idx){
   valid = TRUE
-  if (is.na(idx)){
+  if (is.na(idx) | idx > nrow(data.matrix) | idx < 1){
     valid = FALSE
     idx <- 1
   }
@@ -84,7 +84,7 @@ showWaterfall = function(xgb.model, explainer, data.matrix, idx){
   else if (max(breakdown_summary) > annotation_height){annotation_height <- max(breakdown_summary) + 0.2}
   options(repr.plot.width = 5, repr.plot.height =3)
   if(valid){
-    title <- paste("Prediction breakdown for gene ", rownames(data.matrix)[idx], " / ", gene_symbols[idx])
+    title <- paste("Gene ", rownames(data.matrix)[idx], " / ", gene_symbols[idx])
     subtitle <- paste("Actual gene expression level: ", gene_expression_level, "| PatternChrome prediction: ", correct)
     color <- "black"
   } else{
@@ -114,11 +114,11 @@ ui <- fluidPage(theme = shinytheme("superhero"),
       # Sidebar with input
       column(3,
              wellPanel(
-               numericInput("index", "Gene index in data matrix (1-11820)", value=1, min=1, max=nrow(validation_test_df)),
-               textInput("gene_id", "GENCODE ID", value=rownames(validation_test_df)[1]),
-               textInput("gene_symbol", "Gene symbol", value="SGIP1"),
+               selectInput("cell_line", "Cell line",
+                           c("E003" = "e003")),
+               textInput("gene", "Gene", value="SGIP1"),
                selectInput("method", "Input method", 
-                   selected="index", c("Gene index" = "index", "GENCODE ID" = "gene_id", "Gene symbol" = "gene_symbol")),
+                   selected="gene_symbol", c("Gene symbol" = "gene_symbol", "GENCODE ID" = "gene_id", "Gene index in data matrix" = "index")),
                actionButton("submit", "Submit", class = "btn btn-primary")
              )       
       ),
@@ -133,23 +133,23 @@ ui <- fluidPage(theme = shinytheme("superhero"),
 server <- function(input, output) {
   observeEvent(input$submit, {
     if(input$method == "index"){
-      idx <- input$index
+      idx <- as.numeric(input$gene)
     }
     else{
       idx <- NA
       if(input$method == "gene_id"){
-        if (input$gene_id %in% rownames(validation_test_df)){
-          idx <- which(rownames(validation_test_df) == input$gene_id)
+        if (input$gene %in% rownames(gene_df)){
+          idx <- which(rownames(gene_df) == input$gene)
         }
       }
       else{
-        if(input$gene_symbol %in% gene_symbols){
-          idx <- which(gene_symbols == input$gene_symbol)
+        if(input$gene %in% gene_symbols){
+          idx <- which(gene_symbols == input$gene)
         }
       }
     }
     output$waterfall <- renderPlot({
-      showWaterfall(xgb_model, explainer, validation_test_df,  idx)
+      showWaterfall(xgb_model, explainer, gene_df,  idx)
     })
   })
 }
