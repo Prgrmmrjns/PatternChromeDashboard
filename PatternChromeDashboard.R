@@ -16,6 +16,7 @@ library(shinythemes)
 xgb_model <- xgb.load("xgb_model")
 load("E003_validation_test_df.RData")
 load("explainer.RData")
+load("gene_symbols.RData")
 
 #### Parameters ####
 threshold = 0.05
@@ -83,11 +84,11 @@ showWaterfall = function(xgb.model, explainer, data.matrix, idx){
   else if (max(breakdown_summary) > annotation_height){annotation_height <- max(breakdown_summary) + 0.2}
   options(repr.plot.width = 5, repr.plot.height =3)
   if(valid){
-    title <- paste("Prediction breakdown for gene ", rownames(data.matrix)[idx])
+    title <- paste("Prediction breakdown for gene ", rownames(data.matrix)[idx], " / ", gene_symbols[idx])
     subtitle <- paste("Actual gene expression level: ", gene_expression_level, "| PatternChrome prediction: ", correct)
     color <- "black"
   } else{
-    title <- "Incorrect GENCODE ID"
+    title <- "Incorrect gene input"
     subtitle <- ""
     color <- "red"
   }
@@ -111,16 +112,18 @@ ui <- fluidPage(theme = shinytheme("superhero"),
     tags$div("Find more information about PatternChrome on ", tags$a(href="https://github.com/Prgrmmrjns/PatternChromeDashboard", "Github") ), 
     fluidRow(
       # Sidebar with input
-      column(2,
+      column(3,
              wellPanel(
-               numericInput("index", "Gene index in data matrix", value=1, min=1, max=nrow(validation_test_df)),
+               numericInput("index", "Gene index in data matrix (1-11820)", value=1, min=1, max=nrow(validation_test_df)),
                textInput("gene_id", "GENCODE ID", value=rownames(validation_test_df)[1]),
-               selectInput("method", "Input method", selected="index", c("Gene index" = "index", "GENCODE ID" = "gene_id")),
+               textInput("gene_symbol", "Gene symbol", value="SGIP1"),
+               selectInput("method", "Input method", 
+                   selected="index", c("Gene index" = "index", "GENCODE ID" = "gene_id", "Gene symbol" = "gene_symbol")),
                actionButton("submit", "Submit", class = "btn btn-primary")
              )       
       ),
       # Mainpanel with plot
-      column(10,
+      column(9,
              plotOutput("waterfall")
       )
     )
@@ -133,11 +136,16 @@ server <- function(input, output) {
       idx <- input$index
     }
     else{
-      if (input$gene_id %in% rownames(validation_test_df)){
-        idx <- which(rownames(validation_test_df) == input$gene_id)
+      idx <- NA
+      if(input$method == "gene_id"){
+        if (input$gene_id %in% rownames(validation_test_df)){
+          idx <- which(rownames(validation_test_df) == input$gene_id)
+        }
       }
       else{
-        idx <- NA
+        if(input$gene_symbol %in% gene_symbols){
+          idx <- which(gene_symbols == input$gene_symbol)
+        }
       }
     }
     output$waterfall <- renderPlot({
