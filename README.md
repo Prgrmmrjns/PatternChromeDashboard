@@ -8,8 +8,11 @@
 
 
 ## Next steps
-[] Add information about the cell line model
-[] Display the most important patterns and provide information about it
-[] Allow the user to upload ChIP-Seq files and get a RNA Seq prediction and a pattern breakdown
+1. Add information about the cell line model
+2. Display the most important patterns and provide information about it
+3. Allow the user to upload ChIP-Seq files and get a RNA Seq prediction and a pattern breakdown
+
+## How it works
+Well we won't tell you yet...
 
 Stay tuned for more and have fun!
